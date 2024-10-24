@@ -25,10 +25,10 @@ function pointStyle(f) {
     var p = f.getProperties(),
         color = '',
         stroke, radius;
-    if (selectedGod !== '' && (!p.主祀神祇 || p.主祀神祇 !== selectedGod)) {
+    if (selectedGod !== '' && (!p['主祀神祇'] || p['主祀神祇'] !== selectedGod)) {
         return emptyStyle;
     }
-    switch (p.類型) {
+    switch (p['類型']) {
         case '寺廟':
         case '宗祠基金會':
         case '宗祠':
@@ -44,13 +44,12 @@ function pointStyle(f) {
             color = '#ff0000';
             break;
     }
-    if (f === currentFeature) {
-        color = '#3c0';
+    if (false !== currentFeature && currentFeature.get('uuid') == p.uuid) {
         stroke = new ol.style.Stroke({
             color: '#000',
             width: 5
         });
-        radius = 15;
+        radius = 25;
     } else {
         stroke = new ol.style.Stroke({
             color: '#000',
@@ -82,11 +81,40 @@ var pointFormat = new ol.format.GeoJSON({
     featureProjection: appView.getProjection()
 });
 
-var vectorPoints = new ol.layer.Vector({
+var clusterSource = new ol.source.Cluster({
+    distance: 40,
     source: new ol.source.Vector({
         format: pointFormat
-    }),
-    style: pointStyle
+    })
+});
+
+var vectorPoints = new ol.layer.Vector({
+    source: clusterSource,
+    style: function(feature) {
+        var size = feature.get('features').length;
+        if (size > 1) {
+            return new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 10 + Math.min(size, 20),
+                    fill: new ol.style.Fill({
+                        color: 'rgba(255, 153, 0, 0.8)'
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: '#fff',
+                        width: 2
+                    })
+                }),
+                text: new ol.style.Text({
+                    text: size.toString(),
+                    fill: new ol.style.Fill({
+                        color: '#fff'
+                    })
+                })
+            });
+        } else {
+            return pointStyle(feature.get('features')[0]);
+        }
+    }
 });
 
 var baseLayer = new ol.layer.Tile({
@@ -163,43 +191,35 @@ map.on('singleclick', function(evt) {
     pointClicked = false;
     map.forEachFeatureAtPixel(evt.pixel, function(feature, layer) {
         if (false === pointClicked) {
-            pointClicked = true;
-            var p = feature.getProperties();
-            if (p.COUNTYNAME) {
-                selectedCounty = p.COUNTYNAME;
-                vectorPoints.getSource().clear();
-                if (!pointsPool[selectedCounty]) {
-                    $.getJSON('data/' + selectedCounty + '.json', function(c) {
-                        pointsPool[selectedCounty] = c;
-                        vectorPoints.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
-                        vectorPoints.getSource().refresh();
-                    });
-                } else {
-                    vectorPoints.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
-                    vectorPoints.getSource().refresh();
-                }
-                county.getSource().refresh();
-            } else {
-                currentFeature = feature;
-                vectorPoints.getSource().refresh();
-                var lonLat = ol.proj.toLonLat(p.geometry.getCoordinates());
-                var message = '<table class="table table-dark">';
-                message += '<tbody>';
-                for (k in p) {
-                    if (k !== 'geometry') {
-                        message += '<tr><th scope="row" style="width: 100px;">' + k + '</th><td>' + p[k] + '</td></tr>';
+            if (feature.get('features')) {
+                var features = feature.get('features');
+                if (features.length === 1) {
+                    pointClicked = true;
+                    var p = features[0].getProperties();
+                    if (p.uuid) {
+                        routie('point/' + p['行政區'] + '/' + p.uuid);
                     }
+                } else if (features.length > 1) {
+                    var extent = ol.extent.createEmpty();
+                    features.forEach(function(f) {
+                        ol.extent.extend(extent, f.getGeometry().getExtent());
+                    });
+
+                    var currentZoom = map.getView().getZoom();
+                    var newZoom = currentZoom + Math.log2(features.length);
+                    newZoom = Math.min(newZoom, 20);
+
+                    map.getView().fit(extent, {
+                        duration: 1000,
+                        padding: [50, 50, 50, 50],
+                        maxZoom: newZoom
+                    });
+
+                    pointClicked = true;
                 }
-                message += '<tr><td colspan="2">';
-                message += '<hr /><div class="btn-group-vertical" role="group" style="width: 100%;">';
-                message += '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lonLat[1] + ',' + lonLat[0] + '&travelmode=driving" target="_blank" class="btn btn-info btn-lg btn-block">Google 導航</a>';
-                message += '<a href="https://wego.here.com/directions/drive/mylocation/' + lonLat[1] + ',' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Here WeGo 導航</a>';
-                message += '<a href="https://bing.com/maps/default.aspx?rtp=~pos.' + lonLat[1] + '_' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Bing 導航</a>';
-                message += '</div></td></tr>';
-                message += '</tbody></table>';
-                sidebarTitle.innerHTML = p.名稱;
-                content.innerHTML = message;
-                sidebar.open('home');
+            } else if (feature.get('COUNTYNAME')) {
+                pointClicked = true;
+                routie('county/' + feature.get('COUNTYNAME'));
             }
         }
     });
@@ -277,5 +297,77 @@ $('#selectGod').html(godsOptions).change(function() {
 });
 $('#findGod').change(function() {
     selectedGod = $(this).val();
-    vectorPoints.getSource().refresh();
+    clusterSource.refresh();
 }).val('');
+
+routie({
+    'county/:countyName': function(countyName) {
+        selectedCounty = countyName;
+        clusterSource.getSource().clear();
+        if (!pointsPool[selectedCounty]) {
+            $.getJSON('data/' + selectedCounty + '.json', function(c) {
+                pointsPool[selectedCounty] = c;
+                clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
+            });
+        } else {
+            clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
+        }
+        county.getSource().refresh();
+    },
+
+    'point/:county/:uuid': function(countyName, uuid) {
+        if (!pointsPool[countyName]) {
+            clusterSource.getSource().clear();
+            selectedCounty = countyName;
+            county.getSource().refresh();
+            $.getJSON('data/' + countyName + '.json', function(c) {
+                pointsPool[countyName] = c;
+                clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[countyName]));
+                displayPointInfo(countyName, uuid);
+            });
+        } else if (selectedCounty != countyName) {
+            clusterSource.getSource().clear();
+            selectedCounty = countyName;
+            county.getSource().refresh();
+            clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[countyName]));
+            displayPointInfo(countyName, uuid);
+        } else {
+            displayPointInfo(countyName, uuid);
+        }
+    }
+});
+
+function displayPointInfo(county, uuid) {
+    var features = pointFormat.readFeatures(pointsPool[county]);
+    var feature = features.find(f => f.get('uuid') === uuid);
+
+    if (feature) {
+        currentFeature = feature;
+
+        var p = feature.getProperties();
+        var lonLat = ol.proj.toLonLat(p.geometry.getCoordinates());
+        var message = '<table class="table table-dark">';
+        message += '<tbody>';
+        for (k in p) {
+            if (k != 'geometry' && k != 'uuid' && k != 'WGS84X' && k != 'WGS84Y') {
+                message += '<tr><th scope="row" style="width: 100px;">' + k + '</th><td>' + p[k] + '</td></tr>';
+            }
+        }
+        message += '<tr><td colspan="2">';
+        message += '<hr /><div class="btn-group-vertical" role="group" style="width: 100%;">';
+        message += '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lonLat[1] + ',' + lonLat[0] + '&travelmode=driving" target="_blank" class="btn btn-info btn-lg btn-block">Google 導航</a>';
+        message += '<a href="https://wego.here.com/directions/drive/mylocation/' + lonLat[1] + ',' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Here WeGo 導航</a>';
+        message += '<a href="https://bing.com/maps/default.aspx?rtp=~pos.' + lonLat[1] + '_' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Bing 導航</a>';
+        message += '</div></td></tr>';
+        message += '</tbody></table>';
+        sidebarTitle.innerHTML = p['名稱'];
+        content.innerHTML = message;
+        sidebar.open('home');
+
+        appView.setCenter(feature.getGeometry().getCoordinates());
+        if (appView.getZoom() < 14) {
+            appView.setZoom(14);
+        }
+        clusterSource.refresh();
+    }
+}
