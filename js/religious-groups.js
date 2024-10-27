@@ -21,10 +21,10 @@ var filterExtent = false;
 var selectedGod = '';
 var emptyStyle = new ol.style.Style();
 
-function pointStyle(f) {
+function pointStyle(f, resolution) {
     var p = f.getProperties(),
         color = '',
-        stroke, radius;
+        stroke, size;
     if (selectedGod !== '' && (!p['主祀神祇'] || p['主祀神祇'] !== selectedGod)) {
         return emptyStyle;
     }
@@ -47,26 +47,45 @@ function pointStyle(f) {
     if (false !== currentFeature && currentFeature.get('uuid') == p.uuid) {
         stroke = new ol.style.Stroke({
             color: '#000',
-            width: 5
+            width: 3
         });
-        radius = 25;
+        size = 30;
     } else {
         stroke = new ol.style.Stroke({
-            color: '#000',
-            width: 2
+            color: '#fff',
+            width: 1
         });
-        radius = 10;
+        size = 15;
     }
 
     let pointStyle = new ol.style.Style({
-        image: new ol.style.Circle({
-            radius: radius,
+        image: new ol.style.RegularShape({
+            points: 3,
+            radius: size,
             fill: new ol.style.Fill({
                 color: color
             }),
-            stroke: stroke
+            stroke: stroke,
+            rotation: Math.PI / 4
         })
     });
+
+    var zoom = map.getView().getZoomForResolution(resolution);
+    if (zoom > 14 && p['主祀神祇']) {
+        pointStyle.setText(new ol.style.Text({
+            text: p['主祀神祇'],
+            font: '12px Arial',
+            fill: new ol.style.Fill({
+                color: '#000'
+            }),
+            stroke: new ol.style.Stroke({
+                color: '#fff',
+                width: 2
+            }),
+            offsetY: -size - 5
+        }));
+    }
+
     return pointStyle;
 }
 var sidebarTitle = document.getElementById('sidebarTitle');
@@ -90,7 +109,7 @@ var clusterSource = new ol.source.Cluster({
 
 var vectorPoints = new ol.layer.Vector({
     source: clusterSource,
-    style: function(feature) {
+    style: function(feature, resolution) {
         var size = feature.get('features').length;
         if (size > 1) {
             return new ol.style.Style({
@@ -112,7 +131,7 @@ var vectorPoints = new ol.layer.Vector({
                 })
             });
         } else {
-            return pointStyle(feature.get('features')[0]);
+            return pointStyle(feature.get('features')[0], resolution);
         }
     }
 });
@@ -300,29 +319,58 @@ $('#findGod').change(function() {
     clusterSource.refresh();
 }).val('');
 
+var searchData = [];
+
+$(document).ready(function() {
+    $('#searchPoint').autocomplete({
+        source: function(request, response) {
+            var results = $.ui.autocomplete.filter(searchData, request.term);
+            response(results.slice(0, 10));
+        },
+        minLength: 1,
+        select: function(event, ui) {
+            var features = clusterSource.getSource().getFeatures();
+            var feature = features.find(f => f.get('uuid') === ui.item.id);
+            if (feature) {
+                var county = feature.get('行政區');
+                var uuid = feature.get('uuid');
+                routie('point/' + county + '/' + uuid);
+            }
+        }
+    });
+});
+
 routie({
     'county/:countyName': function(countyName) {
         selectedCounty = countyName;
         clusterSource.getSource().clear();
+        searchData = [];
         if (!pointsPool[selectedCounty]) {
             $.getJSON('data/' + selectedCounty + '.json', function(c) {
                 pointsPool[selectedCounty] = c;
-                clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
+                var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+                clusterSource.getSource().addFeatures(features);
+                populateSearchData(features);
             });
         } else {
-            clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[selectedCounty]));
+            var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+            clusterSource.getSource().addFeatures(features);
+            populateSearchData(features);
         }
         county.getSource().refresh();
     },
 
     'point/:county/:uuid': function(countyName, uuid) {
         if (!pointsPool[countyName]) {
+            searchData = [];
             clusterSource.getSource().clear();
             selectedCounty = countyName;
             county.getSource().refresh();
             $.getJSON('data/' + countyName + '.json', function(c) {
                 pointsPool[countyName] = c;
-                clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[countyName]));
+                var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+                clusterSource.getSource().addFeatures(features);
+                populateSearchData(features);
                 displayPointInfo(countyName, uuid);
             });
         } else if (selectedCounty != countyName) {
@@ -337,11 +385,23 @@ routie({
     }
 });
 
+function populateSearchData(features) {
+    features.forEach(function(feature) {
+        var props = feature.getProperties();
+        searchData.push({
+            label: props['名稱'] + ' (' + props['地址'] + ') ' + props['電話'],
+            value: props['名稱'],
+            id: props['uuid']
+        });
+    });
+}
+
 function displayPointInfo(county, uuid) {
     var features = pointFormat.readFeatures(pointsPool[county]);
     var feature = features.find(f => f.get('uuid') === uuid);
 
     if (feature) {
+        feature.setId(uuid);
         currentFeature = feature;
 
         var p = feature.getProperties();
