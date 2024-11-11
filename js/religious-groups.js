@@ -107,33 +107,45 @@ var clusterSource = new ol.source.Cluster({
     })
 });
 
+function vectorPointsStyle(feature, resolution) {
+    var size = feature.get('features').length;
+    if (size > 1) {
+        if (selectedGod !== '') {
+            var matchingFeatures = feature.get('features').filter(function(f) {
+                var mainGod = f.getProperties()['主祀神祇'];
+                return mainGod && mainGod === selectedGod;
+            });
+            if (matchingFeatures.length === 0) {
+                return emptyStyle;
+            }
+            size = matchingFeatures.length;
+        }
+        return new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 10 + Math.min(size, 20),
+                fill: new ol.style.Fill({
+                    color: 'rgba(255, 153, 0, 0.8)'
+                }),
+                stroke: new ol.style.Stroke({
+                    color: '#fff',
+                    width: 2
+                })
+            }),
+            text: new ol.style.Text({
+                text: size.toString(),
+                fill: new ol.style.Fill({
+                    color: '#fff'
+                })
+            })
+        });
+    } else {
+        return pointStyle(feature.get('features')[0], resolution);
+    }
+}
+
 var vectorPoints = new ol.layer.Vector({
     source: clusterSource,
-    style: function(feature, resolution) {
-        var size = feature.get('features').length;
-        if (size > 1) {
-            return new ol.style.Style({
-                image: new ol.style.Circle({
-                    radius: 10 + Math.min(size, 20),
-                    fill: new ol.style.Fill({
-                        color: 'rgba(255, 153, 0, 0.8)'
-                    }),
-                    stroke: new ol.style.Stroke({
-                        color: '#fff',
-                        width: 2
-                    })
-                }),
-                text: new ol.style.Text({
-                    text: size.toString(),
-                    fill: new ol.style.Fill({
-                        color: '#fff'
-                    })
-                })
-            });
-        } else {
-            return pointStyle(feature.get('features')[0], resolution);
-        }
-    }
+    style: vectorPointsStyle
 });
 
 var baseLayer = new ol.layer.Tile({

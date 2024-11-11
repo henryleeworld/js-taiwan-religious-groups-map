@@ -70,24 +70,40 @@
                 </div>
                 <div class="sidebar-pane" id="settings">
                     <h1 class="sidebar-header">
-                        <span id="weekTitle">設定</span><span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
+                        <span id="weekTitle">設定</span>
+                        <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
                     </h1>
-                    <div>
-                        <a href="#" class="btn btn-primary btn-lg btn-block" id="btn-geolocation">回到目前位置</a>
-                    </div>
-                    <p>
-                        <hr/>
-                    </p>
-                    <div class="card">
-                        <h5 class="card-title">搜尋</h5>
-                        <div class="form-group">
-                            <label for="findGod">主祀神祇</label>
-                            <input type="text" id="findGod" name="findGod" class="form-control" />
-                            <select id="selectGod" name="selectGod" class="form-control form-select"></select>
+                    <div class="p-3">
+                        <div class="mb-4">
+                            <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" id="btn-geolocation">
+                                <i class="fa fa-location-arrow"></i>
+                                <span>回到目前位置</span>
+                            </button>
                         </div>
-                        <div class="form-group">
-                            <label for="searchPoint">搜尋名稱、地址或電話</label>
-                            <input type="text" id="searchPoint" name="searchPoint" class="form-control" placeholder="輸入關鍵字搜尋" />
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header bg-light">
+                                <h5 class="card-title mb-0">主祀神祇搜尋</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="findGod" class="form-label">輸入神祇名稱</label>
+                                    <input type="text" id="findGod" name="findGod" class="form-control mb-2" placeholder="請輸入神祇名稱">
+                                    <select id="selectGod" name="selectGod" class="form-select">
+                                        <option value="">請選擇神祇</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-light">
+                                <h5 class="card-title mb-0">一般搜尋</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="searchPoint" class="form-label">搜尋名稱、地址或電話</label>
+                                    <input type="text" id="searchPoint" name="searchPoint" class="form-control" placeholder="請輸入關鍵字">
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
