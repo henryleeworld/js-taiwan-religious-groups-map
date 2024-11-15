@@ -28,22 +28,26 @@ function pointStyle(f, resolution) {
     if (selectedGod !== '' && (!p['主祀神祇'] || p['主祀神祇'] !== selectedGod)) {
         return emptyStyle;
     }
+
+    var hasPhoto = photoMapping[p.uuid] ? true : false;
+
     switch (p['類型']) {
         case '寺廟':
         case '宗祠基金會':
         case '宗祠':
-            color = '#ceaf30';
+            color = hasPhoto ? '#32CD32' : '#ceaf30';
             break;
         case '教會':
-            color = '#fff';
+            color = hasPhoto ? '#90EE90' : '#fff';
             break;
         case '基金會':
-            color = '#00a6b5';
+            color = hasPhoto ? '#98FB98' : '#00a6b5';
             break;
         default:
-            color = '#ff0000';
+            color = hasPhoto ? '#3CB371' : '#ff0000';
             break;
     }
+
     if (false !== currentFeature && currentFeature.get('uuid') == p.uuid) {
         stroke = new ol.style.Stroke({
             color: '#000',
@@ -52,7 +56,7 @@ function pointStyle(f, resolution) {
         size = 30;
     } else {
         stroke = new ol.style.Stroke({
-            color: '#fff',
+            color: '#000',
             width: 1
         });
         size = 15;
@@ -120,6 +124,11 @@ function vectorPointsStyle(feature, resolution) {
             }
             size = matchingFeatures.length;
         }
+
+        var countWithoutPhoto = feature.get('features').filter(function(f) {
+            return !photoMapping[f.get('uuid')];
+        }).length;
+
         return new ol.style.Style({
             image: new ol.style.Circle({
                 radius: 10 + Math.min(size, 20),
@@ -132,7 +141,7 @@ function vectorPointsStyle(feature, resolution) {
                 })
             }),
             text: new ol.style.Text({
-                text: size.toString(),
+                text: countWithoutPhoto + '/' + size,
                 fill: new ol.style.Fill({
                     color: '#fff'
                 })
@@ -228,9 +237,16 @@ map.on('singleclick', function(evt) {
                     pointClicked = true;
                     var p = features[0].getProperties();
                     if (p.uuid) {
-                        routie('point/' + p['行政區'] + '/' + p.uuid);
+                        var timestamp = Date.now();
+                        setTimeout(function() {
+                            routie('point/' + p['行政區'] + '/' + p.uuid);
+                        }, 1);
                     }
                 } else if (features.length > 1) {
+                    sidebarTitle.innerHTML = '';
+                    content.innerHTML = '';
+                    sidebar.close();
+
                     var extent = ol.extent.createEmpty();
                     features.forEach(function(f) {
                         ol.extent.extend(extent, f.getGeometry().getExtent());
@@ -254,6 +270,11 @@ map.on('singleclick', function(evt) {
             }
         }
     });
+    if (false === pointClicked) {
+        sidebarTitle.innerHTML = '';
+        content.innerHTML = '';
+        sidebar.close();
+    }
 });
 
 var previousFeature = false;
@@ -333,6 +354,75 @@ $('#findGod').change(function() {
 
 var searchData = [];
 
+var photoMapping = {};
+
+function loadPhotoMapping() {
+    $.ajax({
+        url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQgdBZV-REAiv3B356dc_IMZcA1ZNoqpXFFvRjzRe0HcNW5dcBc53zyejsWLxpf10Ulp65LuCJUBPnD/pub?gid=681007359&single=true&output=csv',
+        success: function(csvData) {
+            const rows = csvData.split('\n');
+            rows.shift();
+            rows.forEach(row => {
+                const [timestamp, driveUrl, uuid] = row.split(',');
+                if (uuid && driveUrl) {
+                    const idMatch = driveUrl.match(/[-\w]{25,}/);
+                    const driveId = idMatch ? idMatch[0] : null;
+                    if (driveId) {
+                        photoMapping[uuid.trim()] = driveId;
+                    }
+                }
+            });
+
+            routie({
+                'county/:countyName': function(countyName) {
+                    selectedCounty = countyName;
+                    clusterSource.getSource().clear();
+                    searchData = [];
+                    if (!pointsPool[selectedCounty]) {
+                        $.getJSON('data/' + selectedCounty + '.json', function(c) {
+                            pointsPool[selectedCounty] = c;
+                            var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+                            clusterSource.getSource().addFeatures(features);
+                            populateSearchData(features);
+                        });
+                    } else {
+                        var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+                        clusterSource.getSource().addFeatures(features);
+                        populateSearchData(features);
+                    }
+                    county.getSource().refresh();
+                },
+
+                'point/:county/:uuid': function(countyName, uuid) {
+                    if (!pointsPool[countyName]) {
+                        searchData = [];
+                        clusterSource.getSource().clear();
+                        selectedCounty = countyName;
+                        county.getSource().refresh();
+                        $.getJSON('data/' + countyName + '.json', function(c) {
+                            pointsPool[countyName] = c;
+                            var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
+                            clusterSource.getSource().addFeatures(features);
+                            populateSearchData(features);
+                            displayPointInfo(countyName, uuid);
+                        });
+                    } else if (selectedCounty != countyName) {
+                        clusterSource.getSource().clear();
+                        selectedCounty = countyName;
+                        county.getSource().refresh();
+                        clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[countyName]));
+                        displayPointInfo(countyName, uuid);
+                    } else {
+                        displayPointInfo(countyName, uuid);
+                    }
+                }
+            });
+        }
+    });
+}
+
+loadPhotoMapping();
+
 $(document).ready(function() {
     $('#searchPoint').autocomplete({
         source: function(request, response) {
@@ -350,51 +440,6 @@ $(document).ready(function() {
             }
         }
     });
-});
-
-routie({
-    'county/:countyName': function(countyName) {
-        selectedCounty = countyName;
-        clusterSource.getSource().clear();
-        searchData = [];
-        if (!pointsPool[selectedCounty]) {
-            $.getJSON('data/' + selectedCounty + '.json', function(c) {
-                pointsPool[selectedCounty] = c;
-                var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
-                clusterSource.getSource().addFeatures(features);
-                populateSearchData(features);
-            });
-        } else {
-            var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
-            clusterSource.getSource().addFeatures(features);
-            populateSearchData(features);
-        }
-        county.getSource().refresh();
-    },
-
-    'point/:county/:uuid': function(countyName, uuid) {
-        if (!pointsPool[countyName]) {
-            searchData = [];
-            clusterSource.getSource().clear();
-            selectedCounty = countyName;
-            county.getSource().refresh();
-            $.getJSON('data/' + countyName + '.json', function(c) {
-                pointsPool[countyName] = c;
-                var features = pointFormat.readFeatures(pointsPool[selectedCounty]);
-                clusterSource.getSource().addFeatures(features);
-                populateSearchData(features);
-                displayPointInfo(countyName, uuid);
-            });
-        } else if (selectedCounty != countyName) {
-            clusterSource.getSource().clear();
-            selectedCounty = countyName;
-            county.getSource().refresh();
-            clusterSource.getSource().addFeatures(pointFormat.readFeatures(pointsPool[countyName]));
-            displayPointInfo(countyName, uuid);
-        } else {
-            displayPointInfo(countyName, uuid);
-        }
-    }
 });
 
 function populateSearchData(features) {
@@ -418,7 +463,15 @@ function displayPointInfo(county, uuid) {
 
         var p = feature.getProperties();
         var lonLat = ol.proj.toLonLat(p.geometry.getCoordinates());
-        var message = '<table class="table table-dark">';
+        var message = '';
+
+        if (photoMapping[uuid]) {
+            message += '<iframe src="https://drive.google.com/file/d/' + photoMapping[uuid] + '/preview" style="width:100%; height:400px; border:none; margin-bottom:10px;"></iframe>';
+        } else {
+            message += '<div class="btn-group-vertical" role="group" style="width: 100%;"><a href="https://docs.google.com/forms/d/e/1FAIpQLSdvPybiyuuiTDSk3cuoU_fECQyEqlqCEawzdp12gHkVpLzSmA/viewform?usp=pp_url&entry.2072773208=' + uuid + '" target="_blank" class="btn btn-warning btn-lg btn-block">提供照片</a></div>';
+        }
+
+        message += '<table class="table table-dark">';
         message += '<tbody>';
         for (k in p) {
             if (k != 'geometry' && k != 'uuid' && k != 'WGS84X' && k != 'WGS84Y') {
@@ -427,6 +480,7 @@ function displayPointInfo(county, uuid) {
         }
         message += '<tr><td colspan="2">';
         message += '<hr /><div class="btn-group-vertical" role="group" style="width: 100%;">';
+
         message += '<a href="https://www.google.com/maps/dir/?api=1&destination=' + lonLat[1] + ',' + lonLat[0] + '&travelmode=driving" target="_blank" class="btn btn-info btn-lg btn-block">Google 導航</a>';
         message += '<a href="https://wego.here.com/directions/drive/mylocation/' + lonLat[1] + ',' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Here WeGo 導航</a>';
         message += '<a href="https://bing.com/maps/default.aspx?rtp=~pos.' + lonLat[1] + '_' + lonLat[0] + '" target="_blank" class="btn btn-info btn-lg btn-block">Bing 導航</a>';
