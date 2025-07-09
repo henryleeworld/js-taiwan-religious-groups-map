@@ -9,99 +9,104 @@
         <meta property="og:locale" content="zh_TW" />
         <meta property="og:type" content="website" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol3/4.6.5/ol.css" integrity="sha512-D2c/nmSVlwoZk29SLwJK8GkLyCyPuNbZ/vZQL/lNzw+o+yXzsbnJt7lK/iCfdBmgyLRDi0qx27gpE8Zb1C6I7g==" crossorigin="anonymous" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sidebar-v2@0.4.0/css/ol3-sidebar.min.css" type="text/css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha512-h9FcoyWjHcOcmEVkxOfTLnmZFWIH0iZhZT1H2TbOq55xssQGEJHEaIm+PgoUaZbRvQTNTluNOEfb1ZRy6D3BOw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" integrity="sha512-ENrTWqddXrLJsQS2A86QmvA17PkJ0GVm1bqj5aTgpeMAfDKN2+SIOLpKG8R/6KkimnhTb+VW5qqUHB/r1zaRgg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" integrity="sha512-fYyZwU1wU0QWB4Yutd/Pvhy5J1oWAwFXun1pt+Bps04WSe4Aq6tyHlT4+MHSJhD8JlLfgLuC4CbCnX5KHSjyCg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/css/bootstrap.min.css" integrity="sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/themes/base/jquery-ui.min.css" integrity="sha512-F8mgNaoH6SSws+tuDTveIu+hx6JkVcuLqTQ/S/KJaHJjGc8eUxIrBawMnasq2FDlfo7FYsD8buQXVwD+0upbcA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
         <link rel="stylesheet" href="css/religious-groups.css" type="text/css" />
         <title>台灣宗教地圖</title>
     </head>
     <body>
-        <div id="sidebar" class="sidebar collapsed">
-            <div class="sidebar-tabs">
-                <ul role="tablist">
-                    <li>
-                        <a href="#home" role="tab"><i class="fa-solid fa-bars"></i></a>
-                    </li>
-                    <li>
-                        <a href="#book" role="tab"><i class="fa-solid fa-book"></i></a>
-                    </li>
-                    <li>
-                        <a href="#settings" role="tab"><i class="fa-solid fa-gear"></i></a>
-                    </li>
-                    <li>
-                        <a href="https://github.com/henryleeworld/js-taiwan-religious-groups-map" role="tab" target="_blank"><i class="fa-brands fa-github"></i></a>
-                    </li>
-                </ul>
+        <div class="sacred-header sacred-float">
+            <h1>台灣宗教地圖</h1>
+            <div class="subtitle">探索宗教文化 · 尋找心靈寄託</div>
+        </div>
+        <div id="fab-container">
+            <button id="main-fab" class="btn rounded-circle sacred-fab" style="width: 65px; height: 65px;">
+                <i class="fa fa-bars fa-lg"></i>
+            </button>
+            <div id="fab-menu" class="d-none" style="position: absolute; bottom: 75px; right: 0; display: flex; flex-direction: column; gap: 12px;">
+                <button id="fab-settings" class="btn rounded-circle fab-menu-item" style="width: 52px; height: 52px;" title="設定與搜尋">
+                    <i class="fa fa-gear"></i>
+                </button>
+                <button id="fab-help" class="btn rounded-circle fab-menu-item" style="width: 52px; height: 52px;" title="幫助與說明">
+                    <i class="fa fa-book"></i>
+                </button>
+                <a href="https://github.com/henryleeworld/js-taiwan-religious-groups-map" target="_blank" class="btn rounded-circle fab-menu-item" style="width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; text-decoration: none;" title="原始碼">
+                    <i class="fa-brands fa-github"></i>
+                </a>
             </div>
-            <div class="sidebar-content">
-                <div class="sidebar-pane" id="home">
-                    <h1 class="sidebar-header">
-                        <span id="sidebarTitle">請點選地圖中的點</span><span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
-                    </h1>
-                    <div id="sidebarContent">
-                        <div class="accordion" id="accordionMain">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header" id="heading1">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInfo" aria-expanded="true" aria-controls="collapseInfo">
-                                        基本資料
-                                    </button>
-                                </h2>
-                                <div id="collapseInfo" class="accordion-collapse collapse show" aria-labelledby="heading1" data-bs-parent="#accordionMain">
-                                    <div class="accordion-body" id="infoBox"></div>
-                                </div>
-                            </div>
-                        </div>
+        </div>
+        <div id="point-popup" class="modal fade" tabindex="-1" aria-labelledby="pointPopupLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="pointPopupLabel">
+                            <i class="fa fa-map-marker" style="margin-right: 8px;"></i>
+                            點選地圖中的聖地
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
                     </div>
-                    <div class="btn-group-vertical" role="group" style="width: 100%;">
-                        <a href="https://github.com/henryleeworld/js-taiwan-religious-groups-map/issues" target="_blank" class="btn btn-primary btn-lg btn-block">網站問題反應</a>
+                    <div class="modal-body">
+                        <div id="infoBox"></div>
                     </div>
                 </div>
-                <div class="sidebar-pane" id="book">
-                    <h1 class="sidebar-header">
-                        <span id="weekTitle">說明</span><span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
-                    </h1>
-                    <div>
-                        注意事項：
-                        <ul>
-                            <li><a href="https://religion.moi.gov.tw/" target="_blank">資料來源</a></li>
-                        </ul>
+            </div>
+        </div>
+        <div id="settings-popup" class="modal fade" tabindex="-1" aria-labelledby="settingsPopupLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="settingsPopupLabel">
+                            <i class="fa fa-cog" style="margin-right: 8px;"></i>
+                            設定與搜尋
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
                     </div>
-                </div>
-                <div class="sidebar-pane" id="settings">
-                    <h1 class="sidebar-header">
-                        <span id="weekTitle">設定</span>
-                        <span class="sidebar-close"><i class="fa fa-caret-left"></i></span>
-                    </h1>
-                    <div class="p-3">
+                    <div class="modal-body">
                         <div class="mb-4">
-                            <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2" id="btn-geolocation">
+                            <button class="btn btn-primary w-100 d-flex align-items-center justify-content-center gap-2 sacred-glow" id="btn-geolocation">
                                 <i class="fa fa-location-arrow"></i>
                                 <span>回到目前位置</span>
                             </button>
                         </div>
+
                         <div class="card shadow-sm mb-4">
-                            <div class="card-header bg-light">
-                                <h5 class="card-title mb-0">主祀神祇搜尋</h5>
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fa fa-star" style="margin-right: 8px; color: var(--primary-gold);"></i>
+                                    主祀神祇搜尋
+                                </h5>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label for="findGod" class="form-label">輸入神祇名稱</label>
-                                    <input type="text" id="findGod" name="findGod" class="form-control mb-2" placeholder="請輸入神祇名稱">
+                                    <label for="findGod" class="form-label">
+                                        <i class="fa fa-search" style="margin-right: 5px;"></i>
+                                        輸入神祇名稱
+                                    </label>
+                                    <input type="text" id="findGod" name="findGod" class="form-control mb-2" placeholder="例如：觀世音菩薩、天上聖母、關聖帝君..." />
                                     <select id="selectGod" name="selectGod" class="form-select">
                                         <option value="">請選擇神祇</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
+
                         <div class="card shadow-sm">
-                            <div class="card-header bg-light">
-                                <h5 class="card-title mb-0">一般搜尋</h5>
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fa fa-search" style="margin-right: 8px; color: var(--sacred-purple);"></i>
+                                    一般搜尋
+                                </h5>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3">
-                                    <label for="searchPoint" class="form-label">搜尋名稱、地址或電話</label>
-                                    <input type="text" id="searchPoint" name="searchPoint" class="form-control" placeholder="請輸入關鍵字">
+                                    <label for="searchPoint" class="form-label">
+                                        <i class="fa fa-map-marker" style="margin-right: 5px;"></i>
+                                        搜尋名稱、地址或電話
+                                    </label>
+                                    <input type="text" id="searchPoint" name="searchPoint" class="form-control" placeholder="輸入寺廟名稱、地址或電話號碼..." />
                                 </div>
                             </div>
                         </div>
@@ -109,12 +114,60 @@
                 </div>
             </div>
         </div>
-        <div id="map" class="sidebar-map"></div>
+        <div id="help-popup" class="modal fade" tabindex="-1" aria-labelledby="helpPopupLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="helpPopupLabel">
+                            <i class="fa fa-question-circle" style="margin-right: 8px;"></i>
+                            使用說明
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="關閉"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <i class="fa fa-lightbulb-o" style="margin-right: 8px; color: var(--primary-gold);"></i>
+                                    使用指南
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <ul style="margin-bottom: 0;">
+                                    <li>點擊地圖上的標記查看宗教場所資訊</li>
+                                    <li>使用右下角的選單進行搜尋與設定</li>
+                                    <li>綠色標記表示已有照片的地點</li>
+                                    <li>點擊群組標記可放大查看更多細節</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    <i class="fa fa-database" style="margin-right: 8px; color: var(--sacred-purple);"></i>
+                                    資料來源
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <p>本地圖資料來源於：</p>
+                                <ul style="margin-bottom: 0;">
+                                    <li><a href="https://religion.moi.gov.tw/" target="_blank" class="text-decoration-none">內政部宗教事務系統</a></li>
+                                    <li>各縣市政府公開資料</li>
+                                    <li>民眾提供的照片與資訊</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="map" style="height: 100%; width: 100%;"></div>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js" integrity="sha512-MlEyuwT6VkRXExjj8CdBKNgd+e2H+aYZOCUaCrt9KRk6MlZDOs91V1yK22rwm8aCIsb5Ec1euL8f0g58RKT/Pg==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.3/js/bootstrap.bundle.min.js" integrity="sha512-7Pi/otdlbbCR+LnW+F7PwFcSDJOuUJB3OxtEHbg4vSMvzvJjde4Po1v4BR9Gdc9aXNUNFVUY+SK51wWT8WF0Gg==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ol3/4.6.5/ol.js" integrity="sha512-O7kHS9ooekX8EveiC94z9xSvD/4xt10Qigl6uEKvspYykdux3Ci5QNu5fwi4ca0ZkZI/oCgx5ja8RklWUEqzxQ==" crossorigin="anonymous" defer></script>
-        <script src="https://cdn.jsdelivr.net/npm/sidebar-v2@0.4.0/js/ol3-sidebar.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js" integrity="sha512-TiMWaqipFi2Vqt4ugRzsF8oRoGFlFFuqIi30FFxEPNw58Ov9mOy6LgC05ysfkxwLE0xVeZtmr92wVg9siAFRWA==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js" integrity="sha512-4UKI/XKm3xrvJ6pZS5oTRvIQGIzZFoXR71rRBb1y2N+PbwAsKa5tPl2J6WvbEvwN3TxQCm8hMzsl/pO+82iRlg==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/routie/0.3.2/routie.min.js" integrity="sha512-uawpwYzsuRBIPLEokpO3B70T3/gISq67oTbMbUxvO3CeWaDxvLxwSq6Lb3cYeGUj1Pr//s1tPjVmlRZ/HEDazQ==" crossorigin="anonymous" referrerpolicy="no-referrer" defer></script>
         <script src="js/religious-groups.js" type="text/javascript" defer></script>
     </body>
